@@ -32,7 +32,6 @@ lookUp x xys
 vars :: Formula -> [Id]
 vars = nub . sort . vars'
   where
-    vars' :: Formula -> [Id]
     vars' (Var v)   = [v]
     vars' (Not a)   = vars' a
     vars' (And a b) = vars' a ++ vars' b
@@ -85,7 +84,7 @@ flatten f = flatten' f
     flatten' (Var v)
       = [[lookUp v idmap]]
     flatten' (Not (Var v))
-      = [[negate (lookUp v idmap)]]
+      = [[-(lookUp v idmap)]]
     flatten' (And a b)
       = flatten' a ++ flatten' b
     -- flatten' a and flatten' b guaranteed to be of form [[m,..,n]]
