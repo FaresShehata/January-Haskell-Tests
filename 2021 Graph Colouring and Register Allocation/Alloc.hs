@@ -159,6 +159,39 @@ liveVars duss = l' (map (const []) duss)
             | line <- duss]
 
 
+-- Completed after 3 hours
 buildCFG :: Function -> CFG
-buildCFG 
-  = undefined
+-- Pre: Function is well formed, i.e.:
+-- the first branch of an if statement is non empty
+-- the body of a while loop is non empty and does not contain a return statement
+-- a return statement is the last statement in a block or sub-block
+buildCFG (_, _, b) = snd $ bcfg' 0 b
+  where
+    bcfg' :: Int -> Block -> (Int, CFG)
+    bcfg' n [] = (n, [])
+    bcfg' n ((Assign v e) : ss)
+      = (n', ((v, varsInExp e), s) : cfg')
+      where
+        (n', cfg') = bcfg' (n + 1) ss
+
+        s = if v == "return" then [] else [n + 1]
+
+    bcfg' n ((If e b1 b2) : ss)
+      = (n', (("_", varsInExp e), [n + 1, n1])
+      : init cfg1 ++ (du, s')
+      : cfg2 ++ cfg')
+      where
+        (n1, cfg1) = bcfg' (n + 1) b1
+        (n2, cfg2) = bcfg' n1      b2
+        (n', cfg') = bcfg' n2      ss
+
+        (du, s) = last cfg1
+        s' = if null s then s else [n2]
+
+    bcfg' n ((While e b) : ss)
+      = (n', (("_", varsInExp e), [n + 1, nb])
+      : init cfgb ++ (du, [n]) : cfg')
+      where
+        (nb, cfgb) = bcfg' (n + 1) b
+        (n', cfg') = bcfg' nb      ss
+        (du, _) = last cfgb
