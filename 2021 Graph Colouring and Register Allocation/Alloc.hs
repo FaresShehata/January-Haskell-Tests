@@ -125,9 +125,39 @@ buildIG lvs = (nub . concat $ lvs, nub . concatMap b $ lvs)
 --
 -- Part V
 --
+
+varsInExp :: Exp -> [Id]
+varsInExp = nub . v'
+  where
+    v' (Const _)        = []
+    v' (Var v)          = [v]
+    v' (Apply op e1 e2) = v' e1 ++ v' e2
+
+def :: ((Id, [Id]), [Int]) -> Id
+def ((d, _), _) = d
+
+use :: ((Id, [Id]), [Int]) -> [Id]
+use ((_, u), _) = u
+
+-- avoid name conflict
+succ' :: ((Id, [Id]), [Int]) -> [Int]
+succ' ((_, _), s) = s
+
+-- NOT WORKING
 liveVars :: CFG -> [[Id]]
-liveVars 
-  = undefined
+liveVars duss = l' (map (const []) duss)
+  where
+    l' :: [[Id]] -> [[Id]]
+    l' lives
+      | lives' == lives = lives'
+      | otherwise       = l' lives'
+      where
+        lives'
+          = [use line `union`
+             foldr union [] (map (lives !!) (succ' line))
+             \\ [def line]
+            | line <- duss]
+
 
 buildCFG :: Function -> CFG
 buildCFG 
