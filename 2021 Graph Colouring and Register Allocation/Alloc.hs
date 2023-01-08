@@ -195,3 +195,15 @@ buildCFG (_, _, b) = snd $ bcfg' 0 b
         (nb, cfgb) = bcfg' (n + 1) b
         (n', cfg') = bcfg' nb      ss
         (du, _) = last cfgb
+
+
+transform :: Int -> Function -> Function
+transform numRegisters f = renameFun f idmap
+  where
+    idmap = buildIdMap
+          . colourGraph numRegisters
+          . sortGraph
+          . buildIG
+          . liveVars
+          . sortCFG
+          . buildCFG $ f
