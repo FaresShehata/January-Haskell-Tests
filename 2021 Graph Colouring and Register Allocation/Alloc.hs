@@ -143,7 +143,7 @@ use ((_, u), _) = u
 succ' :: ((Id, [Id]), [Int]) -> [Int]
 succ' ((_, _), s) = s
 
--- NOT WORKING
+-- Completed after 3 hours
 liveVars :: CFG -> [[Id]]
 liveVars duss = l' (map (const []) duss)
   where
@@ -154,8 +154,8 @@ liveVars duss = l' (map (const []) duss)
       where
         lives'
           = [use line `union`
-             foldr union [] (map (lives !!) (succ' line))
-             \\ [def line]
+             ((foldr union [] (map (lives !!) (succ' line)))
+             \\ [def line])
             | line <- duss]
 
 
