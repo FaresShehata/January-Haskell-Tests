@@ -21,23 +21,22 @@ lookUp v env
 -- Part I
 
 isFun :: Exp -> Bool
-isFun 
-  = undefined
+isFun (Fun _ _) = True
+isFun _         = False
 
 splitDefs :: [Binding] -> ([Binding], [Binding])
-splitDefs 
-  = undefined
+splitDefs = partition (isFun . snd)
 
 topLevelFunctions :: Exp -> Int
-topLevelFunctions 
-  = undefined
+topLevelFunctions (Let bs _)
+  = length $ filter (isFun . snd) bs
+topLevelFunctions _ = 0
 
 ---------------------------------------------------------
 -- Part II
 
 unionAll :: Eq a => [[a]] -> [a]
-unionAll
-  = undefined
+unionAll = foldl1' union
 
 freeVars :: Exp -> [Id]
 freeVars 
