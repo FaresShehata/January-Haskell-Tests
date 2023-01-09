@@ -49,20 +49,20 @@ primTypes
 
 -- Pre: The search item is in the table
 lookUp :: Eq a => a -> [(a, b)] -> b
-lookUp x xys
-  = fromJust $ lookup x xys
+lookUp k kvs
+  = fromJust $ lookup k kvs
 
 tryToLookUp :: Eq a => a -> b -> [(a, b)] -> b
-tryToLookUp x y xys
-  = fromMaybe y (lookup x xys)
+tryToLookUp k v kvs
+  = fromMaybe v (lookup k kvs)
 
 -- Pre: The given value is in the table
 reverseLookUp :: Eq b => b -> [(a, b)] -> [a]
-reverseLookUp y xys
-  = [x | (x, y') <- xys, y == y']
+reverseLookUp v kvs
+  = [k | (k, v') <- kvs, v == v']
 
 occurs :: String -> Type -> Bool
-occurs s (TVar s') = s == s'
+occurs s (TVar s')    = s == s'
 occurs s (TFun t1 t2) = occurs s t1 || occurs s t2
 occurs _ _ = False
 
@@ -77,19 +77,21 @@ inferType (Number _) _  = TInt
 inferType (Boolean _) _ = TBool
 inferType (Id v) env    = lookUp v env
 inferType (Prim p) _    = lookUp p primTypes
-inferType (Cond p e1 e2) env
-  | inferType p env /= TBool = TErr
-  | TErr `elem` [t1, t2]     = TErr
-  | t1 /= t2                 = TErr
-  | otherwise                = t1
+
+inferType (Cond p e1 e2) env = 
+  -- This catches all the errors
+  if tp == TBool && t1 == t2 then t1 else TErr
   where
+    tp = inferType p  env
     t1 = inferType e1 env
     t2 = inferType e2 env
+
 inferType (App f a) env
   = inferApp (inferType f env) (inferType a env)
   where
     inferApp :: Type -> Type -> Type
     inferApp (TFun t1 t2) t3
+      | TErr `elem` [t1, t2, t3] = TErr
       | t1 == t3 = t2
     inferApp _ _ = TErr
 
@@ -97,7 +99,7 @@ inferType (App f a) env
 -- PART III
 
 applySub :: Sub -> Type -> Type
-applySub s t@(TVar v) = tryToLookUp v t s
+applySub s t@(TVar v)   = tryToLookUp v t s
 applySub s (TFun t1 t2) = TFun (applySub s t1) (applySub s t2)
 applySub _ t = t
 
@@ -111,17 +113,18 @@ unify t t'
 
 unifyPairs :: [(Type, Type)] -> Sub -> Maybe Sub
 unifyPairs [] s = Just s
-unifyPairs ((TInt, TInt) : rest) s = unifyPairs rest s
+unifyPairs ((TInt, TInt) : rest) s   = unifyPairs rest s
 unifyPairs ((TBool, TBool) : rest) s = unifyPairs rest s
 
 unifyPairs ((TVar v, TVar v') : rest) s
   | v == v' = unifyPairs rest s
 
 unifyPairs ((TVar v, t) : rest) s
-  | occurs v t = Nothing
-  | otherwise  = unifyPairs tts' s'
+  | not $ occurs v t = unifyPairs tts' s'
   where
-    tts' = map (mapPair (applySub [(v, t)])) rest
+    f = applySub [(v, t)]
+    tts' = [(f t1, f t2) | (t1, t2) <- rest]
+    -- tts' = map (mapPair (applySub [(v, t)])) rest
     s' = (v, t) : s
 
 unifyPairs ((t, t'@(TVar _)) : rest) s
@@ -155,7 +158,7 @@ inferPolyType e = applySub sub t
   where
     (sub, t, _) = ipt' e [] ['a' : show n | n <- [1..]]
 
--- BRO I HAVE NO IDEA
+
     ipt' :: Expr -> TEnv -> [String] -> (Sub, Type, [String])
     ipt' (Number _) _ as  = ([], TInt, as)
     ipt' (Boolean _) _ as = ([], TBool, as)
@@ -174,12 +177,12 @@ inferPolyType e = applySub sub t
         (sub, te, as') = ipt' e env' as
         tx = applySub sub (TVar a)
 
-    ipt' (App f e) env as
+    ipt' (App f e) env (a:as)
       | mSub == Nothing = ([], TErr, [])
       | otherwise = (sub', applySub uSub (TVar a), as')
       where
         (subf, tf, asf) = ipt' f env as
-        (sube, te, (a:as')) = ipt' e (updateTEnv env subf) asf
+        (sube, te, as') = ipt' e (updateTEnv env subf) asf
         
         mSub = unify tf (TFun te (TVar a))
         uSub = fromJust mSub
@@ -295,6 +298,11 @@ ex14 = Fun "x" (Fun "y" (App (Id "x") (Prim "+")))
 type14 = TFun (TFun (TFun TInt (TFun TInt TInt)) (TVar "a3")) 
               (TFun (TVar "a2") (TVar "a3"))
 
+
 ex15 = Fun "x" (Fun "y" (Cond (App (App (Prim ">") (Id "x")) (Id "y"))
                               (Id "x")
                               (Id "y")))
+type15 = TFun TInt (TFun TInt TInt)
+
+polyExs = [ex9, ex10, ex11, ex12, ex13, ex14, ex15]
+polyTypes = [type9, type10, type11, type12, type13, type14, type15]
