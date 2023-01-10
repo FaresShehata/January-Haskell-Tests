@@ -108,7 +108,8 @@ propUnits cs
     (first, rest') = break isSingleton cs
     ([u] : rest) = rest'
 
-    csPropU = map (filter (/= (-u))) . filter (u `notElem`) $ first ++ rest
+    csPropU = [vs \\ [u]| vs <- first ++ rest, u `notElem` vs]
+    -- csPropU = map (filter (/= (-u))) . filter (u `notElem`) $ first ++ rest
 
     (cs', us) = propUnits csPropU
 
