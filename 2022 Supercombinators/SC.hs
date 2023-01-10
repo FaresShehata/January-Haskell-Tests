@@ -49,7 +49,7 @@ freeVars (App f args)
 freeVars (Fun params e)
   = (freeVars e) \\ params
 freeVars (Let bs e)
-  = freeVars e `union` unionAll (map (freeVars . snd) bs) \\ map fst bs
+  = unionAll (freeVars e : map (freeVars . snd) bs) \\ map fst bs
 
 ---------------------------------------------------------
 -- Part III
